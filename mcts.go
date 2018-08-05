@@ -1,5 +1,5 @@
 
-package main
+package mcts
 
 import (
 	"fmt"
@@ -77,24 +77,24 @@ func (n *Node) UpdateScore(score float64) {
 
 func MonteCarloTimeout(root_node *Node, bias float64, iteration, simulation, timeout int) (*Node, error) {
 	var node *Node
-	var done chan bool 
+	var done chan bool
 
 
 	if iteration <= 0 { return nil, fmt.Errorf("Iteration should be > 0") }
 	go func() {
 		for {
-			
-			
+
+
 			node = MCSelection(root_node, bias)
 			node = MCExpansion(node)
-	
+
 			if len(root_node.UnexploreMoves) == 0 && len(root_node.Children) == 1 {
 				return
 			}
 			score := MCSimulation(node.State, simulation)
-			MCBackPropagation(node, score)	
+			MCBackPropagation(node, score)
 		}
-		
+
 		done <- true
 	}()
 
@@ -103,12 +103,12 @@ func MonteCarloTimeout(root_node *Node, bias float64, iteration, simulation, tim
 		break
 	case <-done:
 	}
-	
+
 	return node, nil
 }
 func MonteCarlo(root_node *Node, bias float64, iteration, simulation int) (*Node, error) {
 	var node *Node
-	
+
 	if iteration <= 0 { return nil, fmt.Errorf("Iteration should be > 0") }
 	if simulation < -1 { return nil, fmt.Errorf("Simulation should be > 0") }
 
@@ -167,12 +167,12 @@ func MCCalculateScore(node *Node, bias float64) float64 {
 	return exploitScore + exploreScore
 }
 func MCExpansion(node *Node) *Node {
-	
+
 	if len(node.UnexploreMoves) == 0 {
 		return node
 	}
 
-	
+
 	new_state := node.State.Copy()
 
 	// Pick random move
@@ -186,7 +186,7 @@ func MCExpansion(node *Node) *Node {
 
 	new_node.Parent = node
 	node.Children = append(node.Children, new_node)
-		
+
 	return new_node
 }
 func MCSimulation(state State, simulation int) float64 {
@@ -202,8 +202,8 @@ func MCSimulation(state State, simulation int) float64 {
 	for i := 0 ; ! simulate_state.GameOver()  && (simulation == -1 || i < simulation) ; i++  {
 
 		moves = simulate_state.AvailableMoves()
-		if moves != nil || len(moves) == 0 { 
-			break 
+		if moves != nil || len(moves) == 0 {
+			break
 		}
 		move := moves[random.Intn(len(moves))]
 		simulate_state.Move(move)
