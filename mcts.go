@@ -141,7 +141,7 @@ func MCSelection(node *Node, bias float64) *Node {
 
 	if len(node.UnexploreMoves) == 0 && node.Children != nil && len(node.Children) > 0 {
 		candidate_node = nil
-		score := -1
+		score := -1.0
 		for _, n := range node.Children {
 			child_score := MCCalculateScore(n, bias)
 			if child_score > score || candidate_node == nil {
