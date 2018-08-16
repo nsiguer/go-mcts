@@ -75,7 +75,7 @@ func (n *Node) UpdateScore(score float64) {
 	n.Outcome += score
 }
 
-func MonteCarloTimeout(root_node *Node, bias float64, iteration, simulation, timeout int) (*Node, error) {
+func MonteCarloTimeout(state State, bias float64, iteration, simulation, timeout int) (*Node, error) {
 	var node *Node
 	var done chan bool = make(chan bool)
 
@@ -86,6 +86,9 @@ func MonteCarloTimeout(root_node *Node, bias float64, iteration, simulation, tim
 	})
 	//defer timer.Close()
 	var running = true
+	var root_node *Node
+
+	root_node = NewNode(nil, state, nil)
 
 	for ; running ; {
 
