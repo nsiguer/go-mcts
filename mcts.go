@@ -11,7 +11,7 @@ import (
 
 
 type State interface {
-	AvailableMoves() 	[]Move
+	AvailableMovesMCTS() 	[]Move
 	Copy() 				State
 	GameOver()			bool
 	Move(m Move)		State
@@ -63,13 +63,13 @@ func (n *Node) DeleteUnexploreMoves(m Move) (error) {
 	}
 	len_moves := len(n.UnexploreMoves)
 	if idx != -1 && len_moves > 1 {
-		n.UnexploreMoves[idx] = n.UnexploreMoves[len_moves - 1]
-		n.UnexploreMoves = n.UnexploreMoves[:len_moves - 1]
+		n.UnexploreMoves = append(n.UnexploreMoves[:idx], n.UnexploreMoves[idx+1:]...)
 	} else if idx != -1 {
 		n.UnexploreMoves = make([]Move, 0)
 	}
 	return nil
 }
+
 func (n *Node) UpdateScore(score float64) {
 	n.Visits++
 	n.Outcome += score
@@ -77,34 +77,36 @@ func (n *Node) UpdateScore(score float64) {
 
 func MonteCarloTimeout(root_node *Node, bias float64, iteration, simulation, timeout int) (*Node, error) {
 	var node *Node
-	var done chan bool
+	var done chan bool = make(chan bool)
 
-
-	if iteration <= 0 { return nil, fmt.Errorf("Iteration should be > 0") }
-	go func() {
-		for {
-
-
-			node = MCSelection(root_node, bias)
-			node = MCExpansion(node)
-
-			if len(root_node.UnexploreMoves) == 0 && len(root_node.Children) == 1 {
-				return
-			}
-			score := MCSimulation(node.State, simulation)
-			MCBackPropagation(node, score)
-		}
-
+	now := time.Now()
+	to	:= time.Nanosecond * time.Duration(timeout) * (1000000)
+	time.AfterFunc(to, func () {
 		done <- true
-	}()
+	})
+	//defer timer.Close()
+	var running = true
 
-	select {
-	case <- time.After(time.Nanosecond * time.Duration(timeout ) * (1000000)):
-		break
-	case <-done:
+	for ; running ; {
+
+		node = MCSelection(root_node, bias)
+		node = MCExpansion(node)
+
+		if len(root_node.UnexploreMoves) == 0 && len(root_node.Children) == 1 {
+			return
+		}
+		score := MCSimulation(node.State, simulation)
+		MCBackPropagation(node, score)
+
+		select {
+		case <-done:
+			fmt.Fprintln(os.Stderr, "Timeout", time.Since(now))
+			running = false
+			break
+		default:
+		}
 	}
-
-	return node, nil
+	return root_node, nil
 }
 func MonteCarlo(root_node *Node, bias float64, iteration, simulation int) (*Node, error) {
 	var node *Node
@@ -132,18 +134,15 @@ func MCSelection(node *Node, bias float64) *Node {
 	var candidate_node *Node
 
 	if node.UnexploreMoves == nil {
-		node.UnexploreMoves = node.State.AvailableMoves()
+		node.UnexploreMoves = node.State.AvailableMovesMCTS()
 	}
 
 
 	if len(node.UnexploreMoves) == 0 && node.Children != nil && len(node.Children) > 0 {
 		candidate_node = nil
-		score := -100.0
-		//fmt.Println("[MCTS] Select node with action:", node.ByMove.toString())
 		for _, n := range node.Children {
 			child_score := MCCalculateScore(n, bias)
-			//fmt.Println("[MCTS][SCORE]", child_score)
-			if child_score > score {
+			if child_score > score || candidate_node == nil {
 				score = child_score
 				candidate_node = n
 			}
@@ -151,7 +150,6 @@ func MCSelection(node *Node, bias float64) *Node {
 		if candidate_node == nil {
 			return node
 		}
-		//fmt.Fprintln(os.Stderr, "[MCTS][SELECT] Select", candidate_node)
 		return MCSelection(candidate_node, bias)
 	}
 	return node
@@ -201,7 +199,7 @@ func MCSimulation(state State, simulation int) float64 {
 
 	for i := 0 ; ! simulate_state.GameOver()  && (simulation == -1 || i < simulation) ; i++  {
 
-		moves = simulate_state.AvailableMoves()
+		moves = simulate_state.AvailableMovesMCTS()
 		if moves != nil || len(moves) == 0 {
 			break
 		}
@@ -215,7 +213,6 @@ func MCBackPropagation(node *Node, score float64) *Node {
 
 	for node.Parent != nil {
 		node.UpdateScore(score)
-		node = node.Parent
 	}
 
 	node.Visits++
