@@ -6,6 +6,7 @@ import (
 	"time"
 	"math/rand"
 	"math"
+	"os"
 )
 
 
@@ -140,6 +141,7 @@ func MCSelection(node *Node, bias float64) *Node {
 
 	if len(node.UnexploreMoves) == 0 && node.Children != nil && len(node.Children) > 0 {
 		candidate_node = nil
+		score := -1
 		for _, n := range node.Children {
 			child_score := MCCalculateScore(n, bias)
 			if child_score > score || candidate_node == nil {
