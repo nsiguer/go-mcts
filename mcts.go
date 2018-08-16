@@ -75,11 +75,13 @@ func (n *Node) UpdateScore(score float64) {
 	n.Outcome += score
 }
 
-func MonteCarloTimeout(root_node *Node, bias float64, iteration, simulation, timeout int) (*Node, error) {
+func MonteCarloTimeout(state State, bias float64, iteration, simulation, timeout int) (*Node, error) {
 	var node *Node
 	var done chan bool
-
-
+	var root_node *Node
+	
+	root_node = NewNode(nil, state, nil)
+	
 	if iteration <= 0 { return nil, fmt.Errorf("Iteration should be > 0") }
 	go func() {
 		for {
