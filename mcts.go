@@ -95,9 +95,6 @@ func MonteCarloTimeout(state State, bias float64, iteration, simulation, timeout
 		node = MCSelection(root_node, bias)
 		node = MCExpansion(node)
 
-		if len(root_node.UnexploreMoves) == 0 && len(root_node.Children) == 1 {
-			return
-		}
 		score := MCSimulation(node.State, simulation)
 		MCBackPropagation(node, score)
 
